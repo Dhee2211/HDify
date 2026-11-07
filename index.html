@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HDify · Photo enhancer</title>
+  <meta name="description" content="Turn photos into HD in your browser. Private, free and powered by WebGPU. Nothing is uploaded.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div class="brand"><span class="logo" aria-hidden="true"></span><h1>HDify</h1></div>
+      <span id="backend" class="badge" data-mode="">Checking…</span>
+    </header>
+    <p class="lead">Make photos sharper and bigger. Runs on your device, nothing is uploaded.</p>
+
+    <label id="drop" class="drop" for="file">
+      <input id="file" type="file" accept="image/*" hidden>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <strong>Drop a photo here</strong>
+      <span>or click to browse · you can also paste</span>
+    </label>
+
+    <section id="workspace" hidden>
+      <div id="compare" class="compare">
+        <canvas id="result"></canvas>
+        <canvas id="orig"></canvas>
+        <input id="slider" type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+        <div class="handle" aria-hidden="true"></div>
+        <span class="tag tag-l">Before</span><span class="tag tag-r">After</span>
+      </div>
+      <p id="info" class="info"></p>
+
+      <div class="controls">
+        <label class="select">
+          <span>Output</span>
+          <select id="scale">
+            <option value="2">2× larger</option>
+            <option value="4" selected>4× larger</option>
+            <option value="hd">Full HD (1920 px)</option>
+            <option value="4k">4K (3840 px)</option>
+          </select>
+        </label>
+        <button id="run" class="btn primary" disabled>Enhance</button>
+        <button id="cancel" class="btn" hidden>Cancel</button>
+        <button id="reset" class="btn ghost">New photo</button>
+      </div>
+
+      <div id="progress" class="progress" hidden>
+        <div class="track"><div id="bar" class="bar"></div></div>
+        <p id="status"></p>
+      </div>
+
+      <div id="actions" class="actions" hidden>
+        <button id="download" class="btn primary">Download PNG</button>
+      </div>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <footer>
+      <span>Open source · MIT</span>
+      <span>Powered by Real-ESRGAN and ONNX Runtime Web</span>
+    </footer>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

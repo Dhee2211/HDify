@@ -1,0 +1,25 @@
+name: Bug report
+description: Something went wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: Device / GPU
+  - type: input
+    id: size
+    attributes:
+      label: Photo size and output option
+      placeholder: "4000x3000, 2x"
