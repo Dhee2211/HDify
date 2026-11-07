@@ -86,3 +86,8 @@ footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8p
 .seo details p { margin: 8px 0 0; }
 .seo a, footer a { color: var(--accent); text-decoration: none; }
 .seo a:hover, footer a:hover { text-decoration: underline; }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.strength { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; flex: 1 1 260px; }
+.strength input { flex: 1; accent-color: var(--accent); }
+.strength output { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }

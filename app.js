@@ -21,6 +21,7 @@ const els = {
   bar: $("bar"), status: $("status"), compare: $("compare"), orig: $("orig"),
   result: $("result"), slider: $("slider"), actions: $("actions"), download: $("download"),
   reset: $("reset"), info: $("info"), error: $("error"),
+  strength: $("strength"), strengthValue: $("strengthValue"),
 };
 
 let source = null; // { canvas, w, h, name }
@@ -28,7 +29,10 @@ let sessions = {}; // factor -> InferenceSession
 let usingGPU = null;
 let cancelled = false;
 let busy = false;
-let resultCanvas = null;
+let resultCanvas = null; // what gets downloaded
+let enhanced = null; //     full-strength model output
+let base = null; //         plain high-quality resize (built lazily for blending)
+let blended = null; //      mix of base and enhanced
 
 // ---------------------------------------------------------------- helpers
 const fmtMB = (b) => (b / 1048576).toFixed(0) + " MB";
@@ -259,7 +263,12 @@ async function run() {
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(canvas, 0, 0, final.width, final.height);
     }
+    enhanced = final;
+    base = null;
+    blended = null;
     resultCanvas = final;
+    els.strength.value = 100;
+    els.strengthValue.textContent = "100%";
     showPreview(source.canvas, final);
     els.info.textContent = `${source.w} × ${source.h}  →  ${final.width} × ${final.height}  ·  ${seconds.toFixed(1)}s`;
     els.progress.hidden = true;
@@ -277,6 +286,39 @@ async function run() {
   }
 }
 
+/** Blend the enhanced image with a plain resize. 100 = full enhancement, 0 = plain resize. */
+function applyStrength(percent) {
+  if (!enhanced) return;
+  els.strengthValue.textContent = `${percent}%`;
+  if (percent >= 100) {
+    resultCanvas = enhanced;
+  } else {
+    const { width: w, height: h } = enhanced;
+    if (!base) {
+      base = document.createElement("canvas");
+      base.width = w;
+      base.height = h;
+      const bctx = base.getContext("2d");
+      bctx.imageSmoothingQuality = "high";
+      bctx.drawImage(source.canvas, 0, 0, w, h);
+    }
+    if (!blended) {
+      blended = document.createElement("canvas");
+      blended.width = w;
+      blended.height = h;
+    }
+    const ctx = blended.getContext("2d");
+    ctx.globalAlpha = 1;
+    ctx.drawImage(base, 0, 0);
+    ctx.globalAlpha = percent / 100;
+    ctx.drawImage(enhanced, 0, 0);
+    ctx.globalAlpha = 1;
+    resultCanvas = blended;
+  }
+  const el = els.result;
+  el.getContext("2d").drawImage(resultCanvas, 0, 0, el.width, el.height);
+}
+
 function download() {
   if (!resultCanvas) return;
   resultCanvas.toBlob((blob) => {
@@ -290,7 +332,7 @@ function download() {
 
 function reset() {
   source = null;
-  resultCanvas = null;
+  resultCanvas = enhanced = base = blended = null;
   showError("");
   els.workspace.hidden = true;
   els.drop.hidden = false;
@@ -304,6 +346,7 @@ els.cancel.addEventListener("click", () => { cancelled = true; });
 els.download.addEventListener("click", download);
 els.reset.addEventListener("click", reset);
 els.slider.addEventListener("input", (e) => setSlider(e.target.value));
+els.strength.addEventListener("input", (e) => applyStrength(Number(e.target.value)));
 for (const t of ["dragenter", "dragover"]) {
   document.addEventListener(t, (e) => { e.preventDefault(); els.drop.classList.add("over"); });
 }

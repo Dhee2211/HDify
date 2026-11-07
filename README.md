@@ -19,7 +19,7 @@ Private, free and open source. Powered by WebGPU. Nothing is uploaded.
 - **Sharper and bigger.** Enhance photos 2× or 4×, or target Full HD or 4K.
 - **Private by design.** Your photos are processed on your own device and never leave it.
 - **Fast on the GPU.** Uses WebGPU through ONNX Runtime Web, with a slower CPU fallback.
-- **Before and after.** Drag the slider to compare.
+- **Before and after.** Drag the slider to compare, and use the Strength slider to dial the enhancement up or down.
 - **No install, no backend.** A static site with no build step and no dependencies to install.
 
 ## How it works
