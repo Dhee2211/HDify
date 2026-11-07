@@ -74,3 +74,15 @@ select {
 
 footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 48px; color: var(--muted); font-size: 13px; }
 @media (max-width: 520px) { .btn.ghost { margin-left: 0; } }
+
+.seo { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
+.seo h2 { font-size: 20px; letter-spacing: -0.01em; margin: 0 0 8px; }
+.seo h3 { font-size: 15px; margin: 0 0 4px; }
+.seo p { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
+.seo .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.seo .cols p { margin: 0; }
+.seo details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+.seo summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.seo details p { margin: 8px 0 0; }
+.seo a, footer a { color: var(--accent); text-decoration: none; }
+.seo a:hover, footer a:hover { text-decoration: underline; }

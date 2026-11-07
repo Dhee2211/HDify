@@ -6,6 +6,8 @@
 
 Private, free and open source. Powered by WebGPU. Nothing is uploaded.
 
+**[Try it now: dhee2211.github.io/HDify](https://dhee2211.github.io/HDify/)**
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![WebGPU](https://img.shields.io/badge/WebGPU-enabled-4f46e5)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)

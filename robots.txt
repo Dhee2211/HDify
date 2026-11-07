@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dhee2211.github.io/HDify/sitemap.xml

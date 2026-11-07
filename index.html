@@ -3,8 +3,59 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HDify · Photo enhancer</title>
-  <meta name="description" content="Turn photos into HD in your browser. Private, free and powered by WebGPU. Nothing is uploaded.">
+  <title>HDify: Free Photo Enhancer and Upscaler to HD and 4K, Private in Your Browser</title>
+  <meta name="description" content="Enhance and upscale photos to HD or 4K for free. HDify runs AI super-resolution on your GPU in the browser. No upload, no sign-up, your photos stay on your device.">
+  <meta name="keywords" content="photo enhancer, image upscaler, upscale photo to HD, 4K upscaler, AI image upscaling, Real-ESRGAN, WebGPU, free photo enhancer, private image upscaler">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="canonical" href="https://dhee2211.github.io/HDify/">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="HDify">
+  <meta property="og:title" content="HDify: Turn photos into HD, right in your browser">
+  <meta property="og:description" content="Free, private AI photo enhancer. Upscale to HD or 4K on your own GPU. Nothing is uploaded.">
+  <meta property="og:url" content="https://dhee2211.github.io/HDify/">
+  <meta property="og:image" content="https://dhee2211.github.io/HDify/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="HDify: turn photos into HD, right in your browser">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="HDify: Turn photos into HD, right in your browser">
+  <meta name="twitter:description" content="Free, private AI photo enhancer. Upscale to HD or 4K on your own GPU. Nothing is uploaded.">
+  <meta name="twitter:image" content="https://dhee2211.github.io/HDify/og-image.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "HDify",
+        "url": "https://dhee2211.github.io/HDify/",
+        "description": "Free, private photo enhancer that upscales images to HD or 4K in the browser using WebGPU. Photos never leave your device.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any with a WebGPU-capable browser",
+        "browserRequirements": "Requires WebGPU (Chrome or Edge 113+, Safari 26+)",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "license": "https://opensource.org/licenses/MIT",
+        "codeRepository": "https://github.com/Dhee2211/HDify",
+        "image": "https://dhee2211.github.io/HDify/og-image.png"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is HDify free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. HDify is free and open source under the MIT license, with no sign-up and no limits on how many photos you enhance." } },
+          { "@type": "Question", "name": "Are my photos uploaded anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Enhancement runs entirely in your browser on your own device, so your photos never leave it." } },
+          { "@type": "Question", "name": "How does HDify upscale photos?", "acceptedAnswer": { "@type": "Answer", "text": "It runs the Real-ESRGAN super-resolution model through ONNX Runtime Web on your GPU using WebGPU, tile by tile, then stitches the result together." } },
+          { "@type": "Question", "name": "Which browsers work?", "acceptedAnswer": { "@type": "Answer", "text": "Chrome and Edge 113 or newer, and Safari 26 or newer, support WebGPU. Other browsers fall back to the CPU, which is much slower." } }
+        ]
+      }
+    ]
+  }
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -59,8 +110,26 @@
 
     <p id="error" class="error" role="alert" hidden></p>
 
+
+    <section class="seo" aria-label="About HDify">
+      <h2>Free AI photo enhancer that never uploads your photos</h2>
+      <p>HDify upscales low-resolution photos to HD or 4K using the Real-ESRGAN super-resolution model. It runs entirely in your browser on your GPU through WebGPU, so there is no server, no sign-up and no limit.</p>
+      <div class="cols">
+        <div><h3>Private</h3><p>Your photos stay on your device. Nothing is uploaded or stored.</p></div>
+        <div><h3>Fast</h3><p>WebGPU acceleration enhances photos in seconds on a modern laptop or desktop.</p></div>
+        <div><h3>Open source</h3><p>MIT licensed. <a href="https://github.com/Dhee2211/HDify">Read the code or contribute on GitHub.</a></p></div>
+      </div>
+      <h2>Frequently asked questions</h2>
+      <details><summary>Is HDify free?</summary><p>Yes. It is free and open source, with no sign-up and no limits.</p></details>
+      <details><summary>Are my photos uploaded anywhere?</summary><p>No. Enhancement runs on your own device. Only the 67 MB model file downloads, once, and is cached by your browser.</p></details>
+      <details><summary>How does it upscale photos?</summary><p>It runs the Real-ESRGAN model through ONNX Runtime Web on your GPU, tile by tile, then stitches the tiles back together.</p></details>
+      <details><summary>Which browsers work?</summary><p>Chrome and Edge 113+, and Safari 26+. Other browsers fall back to the CPU, which is much slower.</p></details>
+    </section>
+
+    <noscript><p class="error">HDify needs JavaScript and a WebGPU-capable browser to enhance photos.</p></noscript>
+
     <footer>
-      <span>Open source · MIT</span>
+      <span><a href="https://github.com/Dhee2211/HDify">Open source · MIT</a></span>
       <span>Powered by Real-ESRGAN and ONNX Runtime Web</span>
     </footer>
   </main>
