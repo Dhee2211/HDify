@@ -91,3 +91,24 @@ footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8p
 .strength { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; flex: 1 1 260px; }
 .strength input { flex: 1; accent-color: var(--accent); }
 .strength output { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; user-select: none; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+.examples { margin-top: 56px; }
+.examples h2 { font-size: 20px; letter-spacing: -0.01em; margin: 0 0 6px; }
+.examples .sub { color: var(--muted); margin: 0 0 18px; font-size: 15px; }
+.ex-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; align-items: start; }
+.ex { margin: 0; --pos: 50%; }
+.ex-compare { position: relative; aspect-ratio: var(--ar); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+.ex-compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ex-compare .before { clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
+.ex-compare input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+.ex-compare .handle { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); pointer-events: none; }
+.ex-compare .handle::after { content: ""; position: absolute; top: 50%; left: 50%; width: 24px; height: 24px; border-radius: 50%; transform: translate(-50%, -50%); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.ex figcaption { margin-top: 8px; font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.ex figcaption strong { color: var(--text); }
+.link { font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; margin-left: auto; }
+.link:hover { text-decoration: underline; }
+.credit { margin-top: 14px; font-size: 13px; color: var(--muted); }
+.credit a { color: var(--accent); text-decoration: none; }

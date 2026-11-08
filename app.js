@@ -1,5 +1,9 @@
 import * as ort from "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.webgpu.min.mjs";
 import { reflect, planTiles, planScale } from "./tile.js";
+import {
+  DETECT_SIZE, FACE_SIZE, FFHQ_TEMPLATE, decodeYuNet, nms, scaleFace,
+  similarity, invertTransform, squareBounds,
+} from "./face.js";
 
 // ---------------------------------------------------------------- config
 const HF = "https://huggingface.co/SceneWorks/real-esrgan-onnx/resolve/09f741bac80a246b407da3ee902bf5f3291b602f";
@@ -7,6 +11,21 @@ const MODELS = {
   2: { url: `${HF}/real_esrgan_x2.onnx`, sha256: "7115ba92e8a1bfa63d68558ef006ef3d91273a068d321b1439f8bb1c9179002c", bytes: 67073434 },
   4: { url: `${HF}/real_esrgan_x4.onnx`, sha256: "5c586662929cbc686c1a5c38d9c060dbdb4ea5863a1f7672b8c0761e6b89c033", bytes: 67051616 },
 };
+const FACE_MODELS = {
+  detect: {
+    name: "face detector",
+    url: "https://huggingface.co/opencv/face_detection_yunet/resolve/3cc26e7f1014a5ee5d74a42acee58bafc9d0a310/face_detection_yunet_2023mar.onnx",
+    sha256: "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+    bytes: 232589,
+  },
+  restore: {
+    name: "face restoration model",
+    url: "https://huggingface.co/Saimon8420/restoreformer-pp-web/resolve/9e5912e04026135bc1a7c8557a2da66f521a7b8e/restoreformer_pp_int8w.onnx",
+    sha256: "4b3983dba15b8dd26db1bc94be57558ca4d783424ca6f3715676ab53450bcb6c",
+    bytes: 74375477,
+  },
+};
+const MAX_FACES = 10;
 const TILE = 256; // input tile (incl. context). Keeps GPU buffers under default limits.
 const PAD = 16; //   context pixels discarded on each side of a tile
 const CORE = TILE - 2 * PAD;
@@ -21,11 +40,11 @@ const els = {
   bar: $("bar"), status: $("status"), compare: $("compare"), orig: $("orig"),
   result: $("result"), slider: $("slider"), actions: $("actions"), download: $("download"),
   reset: $("reset"), info: $("info"), error: $("error"),
-  strength: $("strength"), strengthValue: $("strengthValue"),
+  strength: $("strength"), strengthValue: $("strengthValue"), faces: $("faces"),
 };
 
 let source = null; // { canvas, w, h, name }
-let sessions = {}; // factor -> InferenceSession
+let sessions = {}; // model key -> InferenceSession
 let usingGPU = null;
 let cancelled = false;
 let busy = false;
@@ -35,7 +54,7 @@ let base = null; //         plain high-quality resize (built lazily for blending
 let blended = null; //      mix of base and enhanced
 
 // ---------------------------------------------------------------- helpers
-const fmtMB = (b) => (b / 1048576).toFixed(0) + " MB";
+const fmtMB = (b) => (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + " MB";
 const setStatus = (t) => (els.status.textContent = t);
 const setBar = (f) => (els.bar.style.width = `${Math.round(f * 100)}%`);
 const showError = (msg) => { els.error.textContent = msg; els.error.hidden = !msg; };
@@ -53,18 +72,18 @@ async function sha256Hex(buf) {
 }
 
 // ---------------------------------------------------------------- model loading
-async function fetchModel(factor) {
-  const m = MODELS[factor];
+async function fetchModel(m) {
+  const label = m.name || "model";
   let cache = null;
   try { cache = await caches.open(CACHE_NAME); } catch { /* private mode etc. */ }
 
   const hit = cache && (await cache.match(m.url));
   if (hit) {
-    setStatus("Loading model from cache…");
+    setStatus(`Loading ${label} from cache…`);
     return await hit.arrayBuffer();
   }
 
-  setStatus(`Downloading model (${fmtMB(m.bytes)}, one time)…`);
+  setStatus(`Downloading ${label} (${fmtMB(m.bytes)}, one time)…`);
   const res = await fetch(m.url);
   if (!res.ok) throw new Error(`Model download failed (HTTP ${res.status})`);
   const total = Number(res.headers.get("content-length")) || m.bytes;
@@ -77,12 +96,12 @@ async function fetchModel(factor) {
     chunks.push(value);
     got += value.length;
     setBar(got / total);
-    setStatus(`Downloading model… ${fmtMB(got)} / ${fmtMB(total)}`);
+    setStatus(`Downloading ${label}… ${fmtMB(got)} / ${fmtMB(total)}`);
   }
   const buf = await new Blob(chunks).arrayBuffer();
 
-  setStatus("Verifying model…");
-  if ((await sha256Hex(buf)) !== m.sha256) throw new Error("Model checksum mismatch. Download was corrupted.");
+  setStatus(`Verifying ${label}…`);
+  if ((await sha256Hex(buf)) !== m.sha256) throw new Error(`The ${label} download was corrupted (checksum mismatch). Please try again.`);
 
   if (cache) {
     try { await cache.put(m.url, new Response(buf)); } catch { /* quota */ }
@@ -90,9 +109,9 @@ async function fetchModel(factor) {
   return buf;
 }
 
-async function getSession(factor) {
-  if (sessions[factor]) return sessions[factor];
-  const buf = await fetchModel(factor);
+async function getSession(key, model = MODELS[key]) {
+  if (sessions[key]) return sessions[key];
+  const buf = await fetchModel(model);
   setStatus("Starting engine…");
   setBar(0);
   const gpu = await hasWebGPU();
@@ -111,7 +130,7 @@ async function getSession(factor) {
     usingGPU = false;
   }
   updateBackendBadge();
-  sessions[factor] = s;
+  sessions[key] = s;
   return s;
 }
 
@@ -192,6 +211,124 @@ async function upscale(factor) {
   return { canvas, seconds: (performance.now() - t0) / 1000 };
 }
 
+// ---------------------------------------------------------------- faces
+/** Find faces in the source photo with YuNet. Returns faces in source-image pixels. */
+async function detectFaces() {
+  const session = await getSession("detect", FACE_MODELS.detect);
+  const k = DETECT_SIZE / Math.max(source.w, source.h);
+  const c = document.createElement("canvas");
+  c.width = c.height = DETECT_SIZE;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, DETECT_SIZE, DETECT_SIZE);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source.canvas, 0, 0, Math.round(source.w * k), Math.round(source.h * k));
+  const px = ctx.getImageData(0, 0, DETECT_SIZE, DETECT_SIZE).data;
+  const plane = DETECT_SIZE * DETECT_SIZE;
+  const input = new Float32Array(3 * plane); // BGR, 0..255
+  for (let i = 0; i < plane; i++) {
+    input[i] = px[i * 4 + 2];
+    input[plane + i] = px[i * 4 + 1];
+    input[2 * plane + i] = px[i * 4];
+  }
+  const tensor = new ort.Tensor("float32", input, [1, 3, DETECT_SIZE, DETECT_SIZE]);
+  const outputs = await session.run({ [session.inputNames[0]]: tensor });
+  const data = {};
+  for (const name of session.outputNames) data[name] = await outputs[name].getData();
+  const found = nms(decodeYuNet((name) => data[name]), 0.3, MAX_FACES);
+  return found.map((f) => scaleFace(f, 1 / k));
+}
+
+/** Warp the face into the 512 x 512 template, restore it, and return a 512 canvas. */
+async function restoreOne(session, canvas, t) {
+  const crop = document.createElement("canvas");
+  crop.width = crop.height = FACE_SIZE;
+  const cctx = crop.getContext("2d", { willReadFrequently: true });
+  cctx.imageSmoothingQuality = "high";
+  cctx.setTransform(t.a, t.b, -t.b, t.a, t.tx, t.ty);
+  cctx.drawImage(canvas, 0, 0);
+  const px = cctx.getImageData(0, 0, FACE_SIZE, FACE_SIZE).data;
+  const plane = FACE_SIZE * FACE_SIZE;
+  const input = new Float32Array(3 * plane); // RGB, -1..1
+  for (let i = 0; i < plane; i++) {
+    input[i] = px[i * 4] / 127.5 - 1;
+    input[plane + i] = px[i * 4 + 1] / 127.5 - 1;
+    input[2 * plane + i] = px[i * 4 + 2] / 127.5 - 1;
+  }
+  const tensor = new ort.Tensor("float32", input, [1, 3, FACE_SIZE, FACE_SIZE]);
+  const outName = session.outputNames[0];
+  const outputs = await session.run({ [session.inputNames[0]]: tensor }, [outName]);
+  const out = await outputs[outName].getData();
+  const img = new ImageData(FACE_SIZE, FACE_SIZE);
+  for (let i = 0; i < plane; i++) {
+    img.data[i * 4] = (out[i] + 1) * 127.5;
+    img.data[i * 4 + 1] = (out[plane + i] + 1) * 127.5;
+    img.data[i * 4 + 2] = (out[2 * plane + i] + 1) * 127.5;
+    img.data[i * 4 + 3] = 255;
+  }
+  tensor.dispose?.();
+  outputs[outName].dispose?.();
+  const res = document.createElement("canvas");
+  res.width = res.height = FACE_SIZE;
+  res.getContext("2d").putImageData(img, 0, 0);
+  return res;
+}
+
+let faceMask = null;
+function getFaceMask() {
+  if (faceMask) return faceMask;
+  faceMask = document.createElement("canvas");
+  faceMask.width = faceMask.height = FACE_SIZE;
+  const ctx = faceMask.getContext("2d");
+  ctx.translate(FACE_SIZE / 2, 268);
+  ctx.scale(1, 1.18);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 210);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.62, "rgba(255,255,255,1)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(-FACE_SIZE, -FACE_SIZE, FACE_SIZE * 2, FACE_SIZE * 2);
+  return faceMask;
+}
+
+/** Blend a restored 512 face back into the canvas with a soft elliptical mask. */
+function pasteFace(canvas, restored, t) {
+  const inv = invertTransform(t);
+  const box = squareBounds(inv, canvas.width, canvas.height);
+  if (!box.w || !box.h) return;
+  const layer = document.createElement("canvas");
+  layer.width = box.w;
+  layer.height = box.h;
+  const ctx = layer.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.setTransform(inv.a, inv.b, -inv.b, inv.a, inv.tx - box.x, inv.ty - box.y);
+  ctx.drawImage(restored, 0, 0);
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(getFaceMask(), 0, 0);
+  canvas.getContext("2d").drawImage(layer, box.x, box.y);
+}
+
+/** Detect faces and restore them in place on the upscaled canvas. Returns how many were restored. */
+async function restoreFaces(canvas, scale) {
+  setStatus("Looking for faces…");
+  setBar(0);
+  const found = await detectFaces();
+  if (!found.length) return 0;
+  if (cancelled) throw new Error("cancelled");
+  const session = await getSession("restore", FACE_MODELS.restore);
+  for (let n = 0; n < found.length; n++) {
+    if (cancelled) throw new Error("cancelled");
+    setBar(n / found.length);
+    setStatus(`Restoring face ${n + 1} of ${found.length}…`);
+    await yieldToUI();
+    const lm = found[n].landmarks.map(([x, y]) => [x * scale, y * scale]);
+    const t = similarity(lm, FFHQ_TEMPLATE);
+    const restored = await restoreOne(session, canvas, t);
+    pasteFace(canvas, restored, t);
+  }
+  return found.length;
+}
+
 // ---------------------------------------------------------------- UI flow
 async function loadImage(file) {
   showError("");
@@ -253,7 +390,19 @@ async function run() {
   els.actions.hidden = true;
   setBar(0);
   try {
-    const { canvas, seconds } = await upscale(plan.model);
+    const started = performance.now();
+    const { canvas } = await upscale(plan.model);
+    let faceCount = 0;
+    if (els.faces.checked) {
+      try {
+        faceCount = await restoreFaces(canvas, plan.model);
+      } catch (e) {
+        if (e.message === "cancelled") throw e;
+        console.error(e);
+        showError(`Face restoration was skipped: ${e.message}`);
+      }
+    }
+    const seconds = (performance.now() - started) / 1000;
     let final = canvas;
     if (plan.final) {
       final = document.createElement("canvas");
@@ -270,7 +419,8 @@ async function run() {
     els.strength.value = 100;
     els.strengthValue.textContent = "100%";
     showPreview(source.canvas, final);
-    els.info.textContent = `${source.w} × ${source.h}  →  ${final.width} × ${final.height}  ·  ${seconds.toFixed(1)}s`;
+    const faceNote = els.faces.checked ? (faceCount ? `  ·  ${faceCount} face${faceCount > 1 ? "s" : ""} restored` : "  ·  no faces found") : "";
+    els.info.textContent = `${source.w} × ${source.h}  →  ${final.width} × ${final.height}  ·  ${seconds.toFixed(1)}s${faceNote}`;
     els.progress.hidden = true;
     els.actions.hidden = false;
   } catch (e) {
@@ -358,6 +508,27 @@ document.addEventListener("paste", (e) => {
   const f = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith("image/"));
   if (f) loadImage(f);
 });
+
+// Examples gallery: compare sliders and "Try this photo"
+for (const fig of document.querySelectorAll(".ex")) {
+  fig.querySelector("input").addEventListener("input", (e) => fig.style.setProperty("--pos", `${e.target.value}%`));
+}
+for (const btn of document.querySelectorAll("[data-example]")) {
+  btn.addEventListener("click", async () => {
+    if (busy) return;
+    const name = btn.dataset.example;
+    try {
+      const blob = await (await fetch(`examples/${name}-input.jpg`)).blob();
+      reset();
+      await loadImage(new File([blob], `${name}.jpg`, { type: "image/jpeg" }));
+      els.faces.checked = btn.dataset.faces === "1";
+      els.scale.value = "4";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      showError("Could not load the example photo.");
+    }
+  });
+}
 
 hasWebGPU().then((gpu) => {
   usingGPU = gpu;

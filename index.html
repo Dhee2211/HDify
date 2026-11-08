@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HDify: Free Photo Enhancer and Upscaler to HD and 4K, Private in Your Browser</title>
-  <meta name="description" content="Enhance and upscale photos to HD or 4K for free. HDify runs AI super-resolution on your GPU in the browser. No upload, no sign-up, your photos stay on your device.">
-  <meta name="keywords" content="photo enhancer, image upscaler, upscale photo to HD, 4K upscaler, AI image upscaling, Real-ESRGAN, WebGPU, free photo enhancer, private image upscaler">
+  <meta name="description" content="Enhance and upscale photos to HD or 4K for free, with optional AI face restoration. HDify runs on your GPU in the browser. No upload, no sign-up, your photos stay on your device.">
+  <meta name="keywords" content="photo enhancer, face restoration, image upscaler, upscale photo to HD, 4K upscaler, AI image upscaling, Real-ESRGAN, WebGPU, free photo enhancer, private image upscaler">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#4f46e5">
   <link rel="canonical" href="https://dhee2211.github.io/HDify/">
@@ -50,6 +50,7 @@
           { "@type": "Question", "name": "Is HDify free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. HDify is free and open source under the MIT license, with no sign-up and no limits on how many photos you enhance." } },
           { "@type": "Question", "name": "Are my photos uploaded anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Enhancement runs entirely in your browser on your own device, so your photos never leave it." } },
           { "@type": "Question", "name": "How does HDify upscale photos?", "acceptedAnswer": { "@type": "Answer", "text": "It runs the Real-ESRGAN super-resolution model through ONNX Runtime Web on your GPU using WebGPU, tile by tile, then stitches the result together." } },
+          { "@type": "Question", "name": "Can HDify restore faces?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It detects faces and restores them with the RestoreFormer++ model, running on your device. The face model downloads only when a face is found." } },
           { "@type": "Question", "name": "Which browsers work?", "acceptedAnswer": { "@type": "Answer", "text": "Chrome and Edge 113 or newer, and Safari 26 or newer, support WebGPU. Other browsers fall back to the CPU, which is much slower." } }
         ]
       }
@@ -93,6 +94,7 @@
             <option value="4k">4K (3840 px)</option>
           </select>
         </label>
+        <label class="check"><input id="faces" type="checkbox" checked> <span>Restore faces</span></label>
         <button id="run" class="btn primary" disabled>Enhance</button>
         <button id="cancel" class="btn" hidden>Cancel</button>
         <button id="reset" class="btn ghost">New photo</button>
@@ -116,9 +118,57 @@
     <p id="error" class="error" role="alert" hidden></p>
 
 
+    <section class="examples" id="examples" aria-label="Examples">
+      <h2>See what it can do</h2>
+      <p class="sub">Each photo below was shrunk to a quarter of its size, then enhanced 4× by HDify. Drag to compare, or try it yourself.</p>
+      <div class="ex-grid">
+        <figure class="ex" style="--ar: 1280 / 848">
+          <div class="ex-compare">
+            <img class="after" src="examples/landscape-hdify.jpg" alt="Mountain landscape enhanced by HDify" loading="lazy">
+            <img class="before" src="examples/landscape-input.jpg" alt="Mountain landscape low-resolution input" loading="lazy">
+            <input type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+            <div class="handle" aria-hidden="true"></div>
+            <span class="tag tag-l">Before</span><span class="tag tag-r">After</span>
+          </div>
+          <figcaption><strong>Landscape</strong> · 320 → 1280 px <button class="link" data-example="landscape" data-faces="0">Try this photo</button></figcaption>
+        </figure>
+        <figure class="ex" style="--ar: 1280 / 960">
+          <div class="ex-compare">
+            <img class="after" src="examples/building-hdify.jpg" alt="City canal and glass building enhanced by HDify" loading="lazy">
+            <img class="before" src="examples/building-input.jpg" alt="City canal and glass building low-resolution input" loading="lazy">
+            <input type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+            <div class="handle" aria-hidden="true"></div>
+            <span class="tag tag-l">Before</span><span class="tag tag-r">After</span>
+          </div>
+          <figcaption><strong>Architecture</strong> · 320 → 1280 px <button class="link" data-example="building" data-faces="0">Try this photo</button></figcaption>
+        </figure>
+        <figure class="ex" style="--ar: 1280 / 1196">
+          <div class="ex-compare">
+            <img class="after" src="examples/portrait1-hdify.jpg" alt="Portrait enhanced by HDify with face restoration" loading="lazy">
+            <img class="before" src="examples/portrait1-input.jpg" alt="Portrait low-resolution input" loading="lazy">
+            <input type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+            <div class="handle" aria-hidden="true"></div>
+            <span class="tag tag-l">Before</span><span class="tag tag-r">After</span>
+          </div>
+          <figcaption><strong>Portrait</strong> · face restored <button class="link" data-example="portrait1" data-faces="1">Try this photo</button></figcaption>
+        </figure>
+        <figure class="ex" style="--ar: 968 / 1280">
+          <div class="ex-compare">
+            <img class="after" src="examples/portrait2-hdify.jpg" alt="Second portrait enhanced by HDify with face restoration" loading="lazy">
+            <img class="before" src="examples/portrait2-input.jpg" alt="Second portrait low-resolution input" loading="lazy">
+            <input type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+            <div class="handle" aria-hidden="true"></div>
+            <span class="tag tag-l">Before</span><span class="tag tag-r">After</span>
+          </div>
+          <figcaption><strong>Portrait</strong> · face restored <button class="link" data-example="portrait2" data-faces="1">Try this photo</button></figcaption>
+        </figure>
+      </div>
+      <p class="credit">Example photos are public domain (CC0). <a href="examples/CREDITS.md">Credits</a></p>
+    </section>
+
     <section class="seo" aria-label="About HDify">
       <h2>Free AI photo enhancer that never uploads your photos</h2>
-      <p>HDify upscales low-resolution photos to HD or 4K using the Real-ESRGAN super-resolution model. It runs entirely in your browser on your GPU through WebGPU, so there is no server, no sign-up and no limit.</p>
+      <p>HDify upscales low-resolution photos to HD or 4K using the Real-ESRGAN super-resolution model, and can restore faces with RestoreFormer++. It runs entirely in your browser on your GPU through WebGPU, so there is no server, no sign-up and no limit.</p>
       <div class="cols">
         <div><h3>Private</h3><p>Your photos stay on your device. Nothing is uploaded or stored.</p></div>
         <div><h3>Fast</h3><p>WebGPU acceleration enhances photos in seconds on a modern laptop or desktop.</p></div>
@@ -128,6 +178,7 @@
       <details><summary>Is HDify free?</summary><p>Yes. It is free and open source, with no sign-up and no limits.</p></details>
       <details><summary>Are my photos uploaded anywhere?</summary><p>No. Enhancement runs on your own device. Only the 67 MB model file downloads, once, and is cached by your browser.</p></details>
       <details><summary>How does it upscale photos?</summary><p>It runs the Real-ESRGAN model through ONNX Runtime Web on your GPU, tile by tile, then stitches the tiles back together.</p></details>
+      <details><summary>Can it restore faces?</summary><p>Yes. Leave "Restore faces" on and HDify finds faces, rebuilds them with the RestoreFormer++ model and blends them back in. The face model (about 71 MB) only downloads if a face is found.</p></details>
       <details><summary>Which browsers work?</summary><p>Chrome and Edge 113+, and Safari 26+. Other browsers fall back to the CPU, which is much slower.</p></details>
     </section>
 
